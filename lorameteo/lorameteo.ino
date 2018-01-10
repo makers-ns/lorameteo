@@ -1,6 +1,7 @@
 #include <Adafruit_BME280.h>
 #include "flip_click_defs.h"
 #include <rn2xx3.h>
+#include "ttn_keys.h"
 
 
 /******************************************************************************
@@ -95,6 +96,7 @@ void loop()
     myLora.txBytes(txBuffer,12); 
 
     led_off();
+    // suggested rate is 1/60Hz (1m)
     delay(60*1000);
 }
 
@@ -117,6 +119,17 @@ void bme_init()
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
   }
+  
+  // weather monitoring. source: Adafruit_BME280_Library-1.0.7
+  Serial.println("-- Weather Station Scenario --");
+  Serial.println("forced mode, 1x temperature / 1x humidity / 1x pressure oversampling,");
+  Serial.println("filter off");
+  bme.setSampling(Adafruit_BME280::MODE_FORCED,
+                  Adafruit_BME280::SAMPLING_X1, // temperature
+                  Adafruit_BME280::SAMPLING_X1, // pressure
+                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::FILTER_OFF   );
+                    
 }
 
 void bme_update()
@@ -140,7 +153,7 @@ void initialize_radio()
     delay(10000);
     hweui = myLora.hweui();
   }
-  Serial.println("When using OTAA, register this DevEUI: ");
+  Serial.println("DevEUI: ");
   Serial.println(hweui);
   Serial.println("RN2xx3 firmware version:");
   Serial.println(myLora.sysver());
@@ -149,11 +162,13 @@ void initialize_radio()
   Serial.println("Trying to join TTN");
   bool join_result = false;
 
-  //ABP: initABP(String addr, String AppSKey, String NwkSKey);
-  join_result = myLora.initABP(REPLACE_ME, REPLACE_ME, REPLACE_ME);
+  //OTAA initialization
+  //join_result = myLora.initOTAA(APP_EUI, APP_KEY);
 
-  //OTAA: initOTAA(String AppEUI, String AppKey);
-  //join_result = myLora.initOTAA(REPLACE_ME, REPLACE_ME);
+  //ABP initialization.
+  //Use if RN2483 FW version < 1.0.0
+  join_result = myLora.initABP(DEV_ADDR, APP_SES_KEY, NWK_SES_KEY);
+
 
   while(!join_result)
   {
